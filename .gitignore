@@ -1,0 +1,53 @@
+# Python キャッシュ
+__pycache__/
+*.py[cod]
+*$py.class
+
+# 仮想環境
+venv/
+env/
+.venv/
+
+# IDE/エディタ設定
+.vscode/
+.idea/
+
+# OS 系ファイル
+.DS_Store
+Thumbs.db
+
+# ログファイル
+*.log
+
+# SQLite / DB ファイル
+*.db
+*.sqlite3
+
+# 環境変数ファイル
+.env
+
+# Docker関連
+docker-compose.override.yml
+docker-compose.override.yaml
+docker/
+
+# 一時ファイル
+*.tmp
+*.swp
+*.bak
+*.orig
+
+# マイグレーションの自動生成ファイル（必要に応じて無視）
+migrations/__pycache__/
+migrations/*.pyc
+
+# Alembic compiled / temporary files
+migrations/versions/*.pyc
+migrations/versions/*.pyo
+migrations/versions/__pycache__/
+
+# SQLite / local database files
+*.db
+*.sqlite3
+*.sqlite
+
