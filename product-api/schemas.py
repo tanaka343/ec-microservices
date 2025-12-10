@@ -25,20 +25,6 @@ class ItemResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
-class UserCreate(BaseModel):
-    name : str = Field(min_length=2,examples=["tanaka"])
-    password : str = Field(min_length=8,examples=["test1234"])
-
-class UserResponse(BaseModel):
-    id : int = Field(gt=0,examples=["1"])
-    name : str = Field(min_length=2,examples=["yamada"])
-    
-    model_config= ConfigDict(from_attributes=True)
-
-class Token(BaseModel):
-    access_token :str
-    token_type :str
-
-class Decoded_Token(BaseModel):
-    username : str
-    user_id : int
+class CategoryResponse(BaseModel):
+    id : int = Field(gt=0)
+    category_name :str = Field(min_length=2,max_length=20)

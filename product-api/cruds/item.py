@@ -8,24 +8,24 @@ from schemas import ItemCreate,ItemUpdate
 def find_all(db :Session ):
     return db.query(Item).order_by(Item.id).all()
 
-def find_by_id(id :int,user_id :int,db :Session ):
-   return db.query(Item).filter(Item.id == id).filter(Item.user_id ==user_id).first()
+def find_by_id(id :int,db :Session ):
+   return db.query(Item).filter(Item.id == id).first()
 
 def find_by_name(name :str,db :Session):
     return db.query(Item).filter(Item.name == name).all()
 
-def create(create_item :ItemCreate,user_id :int,db :Session):
+def create(create_item :ItemCreate,db :Session):
 
     new_item = Item(
-    **create_item.model_dump(),user_id=user_id
+    **create_item.model_dump()
     )
     db.add(new_item)
     db.commit()
     return new_item
 
    
-def update(id :int,update_item :ItemUpdate,user_id :int,db :Session):
-    item = db.query(Item).filter(Item.id == id).filter(Item.user_id==user_id).first()
+def update(id :int,update_item :ItemUpdate,db :Session):
+    item = db.query(Item).filter(Item.id == id).first()
     
     if item is None:
         return None
@@ -39,8 +39,8 @@ def update(id :int,update_item :ItemUpdate,user_id :int,db :Session):
     db.commit()
     return item
 
-def deleate(id :int,user_id :int,db :Session):
-    item = find_by_id(id,user_id,db)
+def deleate(id :int,db :Session):
+    item = find_by_id(id,db)
     if item is None:
        return None
     db.delete(item)
