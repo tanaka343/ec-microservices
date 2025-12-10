@@ -28,3 +28,9 @@ class ItemResponse(BaseModel):
 class CategoryResponse(BaseModel):
     id : int = Field(gt=0)
     category_name :str = Field(min_length=2,max_length=20)
+
+class CategoryCreate(BaseModel):
+    category_name :str = Field(min_length=2,max_length=20,examples=["家具"])
+
+class CategoryUpdate(BaseModel):
+    category_name :str = Field(min_length=2,max_length=20,examples=["かぐ"])
