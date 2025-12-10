@@ -3,20 +3,26 @@ from typing import Optional
 
 
 class ItemCreate(BaseModel):
-    name :str = Field(min_length=2,max_length=20,examples=["tanaka"])
-    email :str = Field(examples=["email@com"])
+    name :str = Field(min_length=2,max_length=20,examples=["desk"])
+    price :str = Field(examples=["2000"])
+    detail :str = Field(min_length=2,max_length=50,examples=["学習机です。"])
+    category_id :int = Field(examples=["1"])
 
 
 class ItemUpdate(BaseModel):
-    name : Optional[str] = Field(default=None,min_length=2,max_length=20,examples=["yamada"])
-    email : Optional[str] = Field(default=None,examples=["email@com"])
+    name :Optional[str] = Field(min_length=2,max_length=20,examples=["desk"])
+    price :Optional[str] = Field(examples=["2000"])
+    detail :Optional[str] = Field(min_length=2,max_length=50,examples=["学習机です。"])
+    category_id :Optional[int] = Field(examples=["1"])
 
 
 class ItemResponse(BaseModel):
     id :int
-    name :str = Field(min_length=2,max_length=20,examples=["satou"])
-    email :str = Field(min_length=2,max_length=20,examples=["dafgz@com"])
-    user_id :int
+    name :str = Field(min_length=2,max_length=20,examples=["desk"])
+    price :str = Field(examples=["2000"])
+    detail :str = Field(min_length=2,max_length=50,examples=["学習机です。"])
+    category_id :int = Field(examples=["1"])
+
     model_config = ConfigDict(from_attributes=True)
 
 class UserCreate(BaseModel):

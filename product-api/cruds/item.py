@@ -31,8 +31,10 @@ def update(id :int,update_item :ItemUpdate,user_id :int,db :Session):
         return None
     
     item.name =item.name if update_item.name is None else update_item.name
-    item.email =item.email if update_item.email is None else update_item.email
-
+    item.price =item.price if update_item.price is None else update_item.price
+    item.email =item.detail if update_item.detail is None else update_item.detail
+    item.email =item.category_id if update_item.category_id is None else update_item.category_id
+    
     db.add(item)
     db.commit()
     return item
