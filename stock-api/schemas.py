@@ -1,16 +1,15 @@
 from pydantic import Field,BaseModel,ConfigDict
 
-class ItemCreate(BaseModel):
+class StockCreate(BaseModel):
     product_id :int = Field(examples=["1"])
     stock :int = Field(examples=["10"])
 
 
-class ItemUpdate(BaseModel):
-    product_id :int = Field(examples=["1"])
+class StockUpdate(BaseModel):
     stock :int = Field(examples=["5"])
 
 
-class ItemResponse(BaseModel):
+class StockResponse(BaseModel):
     id :int
     product_id :int = Field(examples=["1"])
     stock :int = Field(examples=["10"])
