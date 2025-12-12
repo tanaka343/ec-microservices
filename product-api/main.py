@@ -3,10 +3,10 @@ from starlette import status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 import uvicorn
-from routers import item,category
+from routers import product,category
 
 app = FastAPI()
-app.include_router(item.router)
+app.include_router(product.router)
 app.include_router(category.router)
 
 # デバック用
