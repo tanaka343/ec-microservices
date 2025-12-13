@@ -10,7 +10,7 @@ class StockUpdate(BaseModel):
 
 
 class StockResponse(BaseModel):
-    id :int
+    id :int = Field(gt=0)
     product_id :int = Field(examples=["1"])
     stock :int = Field(examples=["10"])
 
