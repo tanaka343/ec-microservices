@@ -8,3 +8,6 @@ class ResponseUser(BaseModel):
     id : int = Field(gt=0,examples=["1"])
     user_name : str = Field(min_length=2,max_length=20,examples=["user1"])
     
+class Token(BaseModel):
+    access_token : str
+    token_type : str
