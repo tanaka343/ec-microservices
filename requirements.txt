@@ -1,8 +1,7 @@
-cryptography==46.0.3
-jose==1.0.0
 fastapi==0.124.0
 uvicorn[standard] 
 pydantic==2.12.5
 SQLAlchemy==2.0.44
 alembic
 requests
+python-jose[cryptography]
