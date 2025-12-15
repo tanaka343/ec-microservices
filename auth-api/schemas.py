@@ -13,6 +13,6 @@ class Token(BaseModel):
     token_type : str
 
 class DecodedToken(BaseModel):
-    user_name = str
-    user_id = int
+    user_name : str
+    user_id : int
     
