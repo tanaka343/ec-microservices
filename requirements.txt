@@ -5,3 +5,4 @@ SQLAlchemy==2.0.44
 alembic
 requests
 python-jose[cryptography]
+python-multipart
