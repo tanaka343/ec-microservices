@@ -8,3 +8,4 @@ class Order(Base):
     product_id = Column(Integer,nullable=False)
     quantity = Column(Integer,nullable=False)
     order_at = Column(DateTime,default=datetime.now())
+    user_id = Column(Integer,nullable=False)

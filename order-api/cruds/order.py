@@ -3,15 +3,21 @@ from schemas import OrderCreate
 from sqlalchemy.orm import Session
 import requests
 from datetime import datetime
+from jose import jwt,JWTError
+
+SECRET_KEY = "3FIQodO54obEzChoXmZFaprULmWd1KkYqc5GbITvYwA="
+ALGORISM = "HS256"
 
 class ProductNotFoundError(Exception):
     pass
 class InsufficientStockError(Exception):
     pass
 
-def create_order(db :Session,product_id :int,quantity :int):
+def create_order(db :Session,product_id :int,quantity :int,token :str):
 
-
+    payload = jwt.decode(token,SECRET_KEY,algorithms=ALGORISM)
+    user_id = payload["id"]
+    
     response_product = requests.get(
         f"http://localhost:8001/products/{product_id}"
     )

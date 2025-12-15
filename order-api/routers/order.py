@@ -11,9 +11,9 @@ router = APIRouter(prefix="/order",tags=["order"])
 Dbdependency = Annotated[Session,Depends(get_db)]
 
 @router.post("",response_model=OrderResponse,status_code=status.HTTP_201_CREATED)
-async def create_order(db :Dbdependency,product_id :int,quantity :int):
+async def create_order(db :Dbdependency,product_id :int,quantity :int,token :str):
   try:
-    return order_cruds.create_order(db,product_id,quantity)
+    return order_cruds.create_order(db,product_id,quantity,token)
   
   except order_cruds.ProductNotFoundError as e:
     raise HTTPException(status_code=400,detail=str(e))
