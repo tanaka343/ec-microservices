@@ -13,10 +13,9 @@ class ProductNotFoundError(Exception):
 class InsufficientStockError(Exception):
     pass
 
-def create_order(db :Session,product_id :int,quantity :int,token :str):
+def create_order(db :Session,product_id :int,quantity :int,user_id :int):
 
-    payload = jwt.decode(token,SECRET_KEY,algorithms=ALGORISM)
-    user_id = payload["id"]
+    
     
     response_product = requests.get(
         f"http://localhost:8001/products/{product_id}"
@@ -42,7 +41,8 @@ def create_order(db :Session,product_id :int,quantity :int,token :str):
         # **order_create.model_dump()
         product_id = product_id,
         quantity = quantity,
-        order_at = datetime.now()
+        order_at = datetime.now(),
+        user_id = user_id
         )
         db.add(new_order)
         db.commit()
@@ -50,7 +50,8 @@ def create_order(db :Session,product_id :int,quantity :int,token :str):
         print(f"New Order ID: {new_order.id}")
         print(f"Product ID: {new_order.product_id}")
         print(f"Quantity: {new_order.quantity}")
-        print(f"Quantity: {new_order.order_at}")
+        print(f"order_at: {new_order.order_at}")
+        print(f"user_id: {new_order.user_id}")
         return new_order
     else:
         raise InsufficientStockError(f"在庫が足りません（在庫：{stock}個、注文数：{quantity}個）")
