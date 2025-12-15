@@ -1,11 +1,14 @@
 from sqlalchemy.orm import Session
-from schemas import CreateUser
+from schemas import CreateUser,DecodedToken
 from models import User
 import base64
 import os
 import hashlib
 from datetime import timedelta,datetime
 from jose import JWTError,jwt
+from fastapi.security import OAuth2PasswordBearer
+from typing import Annotated
+from fastapi import Depends
 
 def create_user(db :Session,user_create :CreateUser):
     salt = base64.b64encode(os.urandom(32))
@@ -40,3 +43,14 @@ def create_access_token(user_name :str,user_id :int,expires_delta :timedelta):
     payload = {"sub" :user_name,"id" :user_id,"exp" :expires}
     return jwt.encode(payload,SECRET_KEY,algorithm=ALGORISM)
 
+oath2_schema = OAuth2PasswordBearer(tokenUrl="/auth/login")
+def get_current_user(token :Annotated[str,Depends(oath2_schema)]):
+    try:
+        payload = jwt.decode(token,SECRET_KEY,algorithm=ALGORISM)
+        user_name = payload.get("sub")
+        user_id = payload.get("id")
+        if user_name is None or user_id is None:
+            return None
+        return DecodedToken(user_name=user_name,user_id=user_id)
+    except JWTError:
+        raise JWTError

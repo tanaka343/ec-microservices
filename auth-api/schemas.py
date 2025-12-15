@@ -11,3 +11,8 @@ class ResponseUser(BaseModel):
 class Token(BaseModel):
     access_token : str
     token_type : str
+
+class DecodedToken(BaseModel):
+    user_name = str
+    user_id = int
+    
