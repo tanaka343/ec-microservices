@@ -49,9 +49,15 @@ def ensure_stock_is_enough(product_id,quantity):
 
 def update_stock(product_id,new_stock):
     response = requests.put(
-            f"http://localhost:8002/stock/{product_id}",
+            f"http://localhost:8002/products/{product_id}",
             json={'stock':new_stock}
         )
+    
+def update_product_status(product_id):
+    response = requests.put(
+            f"http://localhost:8001/stock/{product_id}",
+            json={'status':False}
+    )
     
 def create_order_entity(product_id,quantity,user_id):
     new_order = Order(
@@ -72,9 +78,17 @@ def save_order(db,product_id,quantity,user_id):
 def notify_stock(product_id,stock,quantity):
     update_stock(product_id,stock-quantity)
 
+def mark_as_unsellable(product_id):
+    update_product_status(product_id)
+
+def notify_product_status(product_id,stock,quantity):
+    if stock - quantity ==0:
+        mark_as_unsellable(product_id)
+
 
 OREDER_CONFIRMED_SUBSCRIBERS=[
-    notify_stock
+    notify_stock,
+    notify_product_status
 ]
 
 def publish_order_confirmed(product_id,stock,quantity):
