@@ -17,7 +17,7 @@ ALGORISM = "HS256"
 api_key_header = APIKeyHeader(name="Authorization")
 
 @router.post("",response_model=OrderResponse,status_code=status.HTTP_201_CREATED)
-async def create_order(db :Dbdependency,product_id :int,quantity :int,authorization: str = Depends(api_key_header)):
+async def order_confirm(db :Dbdependency,product_id :int,quantity :int,authorization: str = Depends(api_key_header)):
   token = authorization.replace("Bearer ", "")
   try:
     payload = jwt.decode(token,SECRET_KEY,algorithms=ALGORISM)
@@ -25,7 +25,7 @@ async def create_order(db :Dbdependency,product_id :int,quantity :int,authorizat
   except:
     raise HTTPException(status_code=404,detail="不正なトークンです。")
   try:
-    return order_cruds.create_order(db,product_id,quantity,user_id)
+    return order_cruds.order_confirm(db,product_id,quantity,user_id)
   
   except order_cruds.ProductNotFoundError as e:
     raise HTTPException(status_code=400,detail=str(e))
