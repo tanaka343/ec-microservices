@@ -20,15 +20,32 @@ def fetch_product(product_id):
     )
     if response_product.status_code != 200:
         raise ProductNotFoundError(f"商品ID:{product_id}が見つかりません。")
-    return product_id
+    return response_product.json()
+
+def ensure_product_exists(product_id):
+    product = fetch_product(product_id)
+    return product['id']
+
 
 def fetch_stock(product_id):
     response_stock = requests.get(
         f"http://localhost:8002/stock/{product_id}"
     )
     print(f'Response Body: {response_stock.json()["stock"]}')
-    stock = response_stock.json()["stock"]
-    return stock
+    return response_stock.json()
+
+def ensure_stock_exists(product_id):
+    stock = fetch_stock(product_id)
+    return stock['stock']
+
+def confirm_stock(stock,quantity):
+    if stock < quantity:
+        raise InsufficientStockError(f"在庫が足りません（在庫：{stock}個、注文数：{quantity}個）")
+    
+
+def ensure_stock_is_enough(product_id,quantity):
+    stock =ensure_stock_exists(product_id)
+    confirm_stock(stock,quantity)
 
 def update_stock(product_id,new_stock):
     response = requests.put(
@@ -46,22 +63,32 @@ def create_order_entity(product_id,quantity,user_id):
         )
     return new_order
 
-def confirm_stock(stock,quantity):
-    if stock < quantity:
-        raise InsufficientStockError(f"在庫が足りません（在庫：{stock}個、注文数：{quantity}個）")
-    return quantity
-
-def order_confirm(db,product_id,quantity,user_id):
-    product_id =fetch_product(product_id)
-    stock = fetch_stock(product_id)
-    confirm_stock =confirm_stock(stock,quantity)
-    update_stock(product_id,stock-quantity)
+def save_order(db,product_id,quantity,user_id):
     new_order = create_order_entity(product_id,quantity,user_id)
     db.add(new_order)
     db.commit()
     db.refresh(new_order)
 
+def notify_stock(product_id,stock,quantity):
+    update_stock(product_id,stock-quantity)
 
+
+OREDER_CONFIRMED_SUBSCRIBERS=[
+    notify_stock
+]
+
+def publish_order_confirmed(product_id,stock,quantity):
+    for handler in OREDER_CONFIRMED_SUBSCRIBERS:
+        handler(product_id,stock,quantity)
+
+
+
+def order_confirm(db,product_id,quantity,user_id):
+    product_id =ensure_product_exists(product_id)
+    stock = ensure_stock_is_enough(product_id,quantity)
+    save_order(db,product_id,quantity,user_id)
+    publish_order_confirmed(product_id,stock,quantity)
+    
 
 # def create_order(db :Session,product_id :int,quantity :int,user_id :int):
     
