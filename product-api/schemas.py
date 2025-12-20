@@ -11,11 +11,11 @@ class ItemCreate(BaseModel):
 
 
 class ItemUpdate(BaseModel):
-    name :Optional[str] = Field(min_length=2,max_length=20,examples=["desk"])
-    price :Optional[str] = Field(examples=["2000"])
-    detail :Optional[str] = Field(min_length=2,max_length=50,examples=["学習机です。"])
-    status : bool = Field(default=True,examples=[True])
-    category_id :Optional[int] = Field(examples=["1"])
+    name :Optional[str] = Field(default=None,min_length=2,max_length=20,examples=["desk"])
+    price :Optional[str] = Field(default=None,examples=["2000"])
+    detail :Optional[str] = Field(default=None,min_length=2,max_length=50,examples=["学習机です。"])
+    status : Optional[bool] = Field(default=None,examples=[True])
+    category_id :Optional[int] = Field(default=None,examples=["1"])
 
 
 class ItemResponse(BaseModel):
