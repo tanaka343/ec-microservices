@@ -12,6 +12,8 @@ class ProductNotFoundError(Exception):
     pass
 class InsufficientStockError(Exception):
     pass
+class ProductDiscontinuedError(Exception):
+    pass
 
 
 def fetch_product(product_id :int):
@@ -24,6 +26,8 @@ def fetch_product(product_id :int):
 
 def ensure_product_exists(product_id :int):
     product = fetch_product(product_id)
+    if product['status']==False:
+        raise ProductDiscontinuedError(f"商品ID：{product_id}は販売中止です。")
     return product['id']
 
 

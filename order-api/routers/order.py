@@ -31,3 +31,5 @@ async def order_confirm(db :Dbdependency,product_id :int,quantity :int,authoriza
     raise HTTPException(status_code=400,detail=str(e))
   except order_cruds.InsufficientStockError as e:
     raise HTTPException(status_code=400,detail=str(e))
+  except order_cruds.ProductDiscontinuedError as e:
+    raise HTTPException(status_code=400,detail=str(e))
