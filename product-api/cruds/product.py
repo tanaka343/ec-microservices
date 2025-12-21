@@ -33,6 +33,7 @@ def update(id :int,update_item :ItemUpdate,db :Session):
     item.name =item.name if update_item.name is None else update_item.name
     item.price =item.price if update_item.price is None else update_item.price
     item.detail =item.detail if update_item.detail is None else update_item.detail
+    item.status =item.status if update_item.status is None else update_item.status
     item.category_id =item.category_id if update_item.category_id is None else update_item.category_id
     
     db.add(item)

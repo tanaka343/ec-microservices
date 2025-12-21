@@ -9,6 +9,7 @@ class Item(Base):
     name = Column(String,nullable=False)
     price = Column(String,nullable=False)
     detail = Column(String,nullable=True)
+    status = Column(String,nullable=False)
     category_id = Column(Integer,ForeignKey("categories.id",name="fk_ctegory_id",ondelete="CASCADE"),nullable=False)
     category = relationship("Category",back_populates="products")
 
