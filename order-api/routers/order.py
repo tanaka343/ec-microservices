@@ -25,7 +25,7 @@ async def order_confirm(db :Dbdependency,product_id :int,quantity :int,authoriza
   except:
     raise HTTPException(status_code=404,detail="不正なトークンです。")
   try:
-    return order_cruds.order_confirm(db,product_id,quantity,user_id)
+    return await order_cruds.order_confirm(db,product_id,quantity,user_id)
   
   except order_cruds.ProductNotFoundError as e:
     raise HTTPException(status_code=400,detail=str(e))
