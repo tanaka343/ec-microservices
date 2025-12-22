@@ -38,22 +38,55 @@ ec-microservice/
 
 ### Auth API（認証サービス）
 
-- 画面表示
-- ユーザー操作
-- JWT を使ってFastAPIと通信
+ポート: 8000
+データベース: user.db
+
+- ユーザー登録（サインアップ）
+- ログイン認証
+- JWT トークン発行・検証
 
 ### Product API（商品管理サービス）
 
-- 認証（JWT）
-- DB操作
-- タスクのCRUD
+ポート: 8001
+データベース: product.db
+
+- 商品のCRUD操作
+- カテゴリと商品の関連管理（外部キー制約）
+- 商品IDによる商品検索
 
 ## Stock API（在庫管理サービス）
 
+ポート: 8002
+データベース: stock.db
+
+- 商品ごとの在庫数管理
+- 在庫の照会・更新・削除
+- 商品IDによる在庫検索
 
 ## Order API（注文サービス）
 
+ポート: 8003
+データベース: order.db
 
+- 注文処理（他サービスと連携）
+- 商品在庫確認 → 在庫減算 → 注文記録
+- JWT認証による注文者識別
+
+サービス間連携フロー:
+
+1. JWT トークンから user_id を取得
+2. Product API で商品存在確認
+3. Stock API で在庫数確認
+4. 注文をデータベースに記録
+5. 注文確定イベントを発生させ、以下の処理を行う
+　・stock.db在庫を減少
+　・在庫数が0ならば、product.dbのstatusをfalseに変更
+
+エラーハンドリング:
+
+商品が存在しない → ProductNotFoundError\
+商品が販売中止　→ ProductDiscontinuedError\
+在庫不足 → InsufficientStockError
 
 ## セットアップ
 
@@ -171,12 +204,8 @@ curl -X POST "http://localhost:8003/order?product_id=1&quantity=2" \
   -H "Authorization: Bearer {JWT_TOKEN}"
 ```
 
-
-
-
-
 ## 工夫した点・学んだこと
-
+- 非同期通信を利用することでレスポンス速度を向上させた
 
 ## 改善点・今後の課題
 
