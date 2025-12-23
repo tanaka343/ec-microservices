@@ -31,7 +31,6 @@ async def ensure_product_exists(product_id :int):
     product =  await fetch_product(product_id)
     if product['status']==False:
         raise ProductDiscontinuedError(f"商品ID：{product_id}は販売中止です。")
-    return product['id']
 
 
 async def fetch_stock(product_id :int):
@@ -43,13 +42,14 @@ async def fetch_stock(product_id :int):
                 raise ProductNotFoundError(f"商品ID:{product_id}に在庫が見つかりません。")
             return await response.json()
 
-async def ensure_stock_exists(product_id):
+async def ensure_stock_exists(product_id :int):
     stock = await fetch_stock(product_id)
     return stock['stock']
 
 def confirm_stock(stock :int,quantity :int):
     if stock < quantity:
         raise InsufficientStockError(f"在庫が足りません（在庫：{stock}個、注文数：{quantity}個）")
+        
     
 
 async def ensure_stock_is_enough(product_id :int,quantity :int):
@@ -62,17 +62,19 @@ async def update_stock(product_id :int,new_stock :int):
         async with session.put(
             f"http://localhost:8002/stock/{product_id}",
             json={'stock':new_stock}
-            ) :
-            pass
+            ) as response:
+            if response.status != 200:
+                raise Exception(f"在庫を更新できません:status={response.status}")
     
 async def update_product_status(product_id :int):
     async with aiohttp.ClientSession() as session:
         async with session.put(
             f"http://localhost:8001/products/{product_id}",
             json={'status':False}
-            ):
-            pass
-    
+            ) as response:
+            if response.status != 200:
+                raise Exception(f"販売状況を更新できません:status={response.status}")
+
 def create_order_entity(product_id :int,quantity :int,user_id :int):
     new_order = Order(
         # **order_create.model_dump()
@@ -114,12 +116,12 @@ async def publish_order_confirmed(product_id :int,stock :int,quantity :int):
 
 
 async def order_confirm(db :Session,product_id :int,quantity :int,user_id :int):
-    product_id = await ensure_product_exists(product_id)
+    await ensure_product_exists(product_id)
     stock = await ensure_stock_is_enough(product_id,quantity)
     new_order = save_order(db,product_id,quantity,user_id)
     await publish_order_confirmed(product_id,stock,quantity)
     return new_order
-    
+
 
 # def create_order(db :Session,product_id :int,quantity :int,user_id :int):
     
