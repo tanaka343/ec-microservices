@@ -7,8 +7,7 @@ from jose import jwt,JWTError
 import asyncio
 import aiohttp
 
-# SECRET_KEY = "3FIQodO54obEzChoXmZFaprULmWd1KkYqc5GbITvYwA="
-# ALGORISM = "HS256"
+
 
 class ProductNotFoundError(Exception):
     pass
@@ -123,49 +122,3 @@ async def order_confirm(db :Session,product_id :int,quantity :int,user_id :int):
     return new_order
 
 
-# def create_order(db :Session,product_id :int,quantity :int,user_id :int):
-    
-#     # 商品情報取得
-#     response_product = requests.get(
-#         f"http://localhost:8001/products/{product_id}"
-#     )
-#     if response_product.status_code != 200:
-#         raise ProductNotFoundError(f"商品ID:{product_id}が見つかりません。")
-    
-#     print(f"Response Body: {response_product.text}")
-#     product = response_product.json()
-#     # 在庫があるかを確認
-#     response_stock = requests.get(
-#         f"http://localhost:8002/stock/{product_id}"
-#     )
-#     print(f'Response Body: {response_stock.json()["stock"]}')
-#     stock = response_stock.json()["stock"]
-
-    
-#     if stock >= quantity:
-#         # 在庫を減らす
-#         response = requests.put(
-#             f"http://localhost:8002/stock/{product_id}",
-#             json={'stock':stock - quantity}
-#         )
-#         new_order = Order(
-#         # **order_create.model_dump()
-#         product_id = product_id,
-#         quantity = quantity,
-#         order_at = datetime.now(),
-#         user_id = user_id
-#         )
-#         db.add(new_order)
-#         db.commit()
-#         db.refresh(new_order)
-#         print(f"New Order ID: {new_order.id}")
-#         print(f"Product ID: {new_order.product_id}")
-#         print(f"Quantity: {new_order.quantity}")
-#         print(f"order_at: {new_order.order_at}")
-#         print(f"user_id: {new_order.user_id}")
-#         return new_order
-#     else:
-#         raise InsufficientStockError(f"在庫が足りません（在庫：{stock}個、注文数：{quantity}個）")
-    
-    
-    
