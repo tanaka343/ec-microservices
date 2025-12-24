@@ -109,7 +109,7 @@ def save_order(db :Session,product_id :int,quantity :int,user_id :int):
 #     notify_product_status
 # ]
 
-async def publish_order_confirmed(product_id :int,stock :int,quantity :int):
+def publish_order_confirmed(product_id :int,stock :int,quantity :int):
     # tasks=[
     # handler(product_id,stock,quantity) for handler in OREDER_CONFIRMED_SUBSCRIBERS# 内包表記
     # ]
@@ -124,10 +124,10 @@ async def publish_order_confirmed(product_id :int,stock :int,quantity :int):
 
 
 async def order_confirm(db :Session,product_id :int,quantity :int,user_id :int):
-    await ensure_product_exists(product_id)
-    stock = await ensure_stock_is_enough(product_id,quantity)
-    new_order = save_order(db,product_id,quantity,user_id)
-    publish_order_confirmed(product_id,stock,quantity)
+    await ensure_product_exists(product_id) # 販売中か確認
+    stock = await ensure_stock_is_enough(product_id,quantity) # 在庫の確認と、在庫返却
+    new_order = save_order(db,product_id,quantity,user_id) # 注文保存
+    publish_order_confirmed(product_id,stock,quantity) # イベント発行
     return new_order
 
 
