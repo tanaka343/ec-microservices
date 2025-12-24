@@ -6,3 +6,5 @@ alembic
 requests
 python-jose[cryptography]
 python-multipart
+aiohttp
+redis
