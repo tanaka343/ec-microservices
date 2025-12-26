@@ -16,7 +16,7 @@ async def update_stock(product_id :int,new_stock :int):
             f"http://localhost:8002/stock/{product_id}",
             json={'stock':new_stock}
             ) as response:
-            if response.status_code == 200:
+            if response.status == 200:
               print(f'在庫更新完了：product_id={product_id},new_stock={new_stock}')
             else:
               print(f'在庫更新失敗:{response.text}')
@@ -28,7 +28,7 @@ async def update_product_status(product_id :int):
             f"http://localhost:8001/products/{product_id}",
             json={'status':False}
             ) as response:
-            if response.status_code ==200:
+            if response.status ==200:
                 print(f'販売中止：product_id={product_id}')
             else :
                 raise Exception(f"販売状況を更新できません:status={response.status}")
@@ -37,7 +37,6 @@ async def handle_stock_update(event_data):
   product_id = event_data['product_id']
   stock = event_data['stock']
   quantity = event_data['quantity']
-  print(f'イベント受信:{event_data}')
 
   new_stock = stock-quantity
   await update_stock(product_id,new_stock)
@@ -59,5 +58,9 @@ HANDLERS = [
 for message in pubsub.listen():
   if message['type'] == 'message':
     event_data = json.loads(message['data'])
-    tasks=[handler(event_data) for handler in HANDLERS]
-    asyncio.run(asyncio.gather(*tasks))
+    print(f'イベント受信:{event_data}')
+    async def run_handlers():
+      tasks=[handler(event_data) for handler in HANDLERS]
+      await asyncio.gather(*tasks)
+    
+    asyncio.run(run_handlers())
