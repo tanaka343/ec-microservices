@@ -1,0 +1,10 @@
+fastapi==0.124.0
+uvicorn[standard] 
+pydantic==2.12.5
+SQLAlchemy==2.0.44
+alembic
+requests
+python-jose[cryptography]
+python-multipart
+aiohttp
+redis
