@@ -8,8 +8,11 @@ import asyncio
 import aiohttp
 import redis
 import json
+from google.cloud import pubsub_v1
 
-redis_client = redis.Redis(host='localhost',port=6379,decode_responses=True)
+# redis_client = redis.Redis(host='localhost',port=6379,decode_responses=True)
+publisher = pubsub_v1.PublisherClient()
+topic_path = publisher.topic_path('ec-microservices-demo','order-confirmed')
 
 class ProductNotFoundError(Exception):
     pass
@@ -22,7 +25,7 @@ class ProductDiscontinuedError(Exception):
 async def fetch_product(product_id :int):
     async with aiohttp.ClientSession() as session:
         async with session.get(
-        f"http://localhost:8001/products/{product_id}"
+        f"https://product-api-987336615042.asia-northeast1.run.app/products/{product_id}"
         ) as response:
             if response.status != 200:
                 raise ProductNotFoundError(f"商品ID:{product_id}の商品が見つかりません。")
@@ -37,7 +40,7 @@ async def ensure_product_exists(product_id :int):
 async def fetch_stock(product_id :int):
     async with aiohttp.ClientSession() as session:
         async with session.get(
-        f"http://localhost:8002/stock/{product_id}"
+        f"https://stock-api-987336615042.asia-northeast1.run.app/stock/{product_id}"
         ) as response:
             if response.status != 200:
                 raise ProductNotFoundError(f"商品ID:{product_id}に在庫が見つかりません。")
@@ -119,7 +122,8 @@ def publish_order_confirmed(product_id :int,stock :int,quantity :int):
         'stock':stock,
         'quantity':quantity
     }
-    redis_client.publish("order_confirmed",json.dumps(event_data))
+    # redis_client.publish("order_confirmed",json.dumps(event_data))
+    publisher.publish(topic_path,json.dumps(event_data).encode('utf-8'))
     print(f'publish event:{event_data}')
 
 
