@@ -12,6 +12,16 @@ FastAPIを使用したEcサイトの注文システムのマイクロサービ�
 - 同期非同期通信の理解
 - メッセージキューの導入
 
+## アーキテクチャ
+
+### ローカル開発環境（Redis使用）
+
+![ローカル環境構成](images/注文システムアプリ図-Redis版注文システム.drawio.png)
+
+### GCP本番環境（Cloud Pub/Sub使用）
+
+![GCP環境構成](images/注文システムアプリ図-GCP版注文システム.drawio.png)
+
 ## 技術スタック
 
 FastAPI\
@@ -88,7 +98,96 @@ ec-microservice/
 商品が販売中止　→ ProductDiscontinuedError\
 在庫不足 → InsufficientStockError
 
-## セットアップ
+## GCPデプロイ（本番環境）
+
+### デプロイ済みサービス（動作確認のみ）
+
+- auth-api: Cloud Run (JWT認証)
+- product-api: Cloud Run (商品管理)
+- stock-api: Cloud Run (在庫管理)
+- order-api: Cloud Run (注文処理)
+- order-worker: Cloud Run Jobs (イベント購読)
+- メッセージキュー: Cloud Pub/Sub
+
+#### Cloud Runコンソール画面
+
+![Cloud Runサービス一覧](images/コンソール画面.png)
+
+4つのサービスが正常にデプロイされている状態。
+
+#### 動作確認
+
+![注文](images/注文.png)
+![在庫減少](images/stock-api-stock0.png)
+![販売中止](images/products-false.png)
+
+注文処理により在庫が減少し、在庫ゼロで自動的に販売中止となることを確認。
+
+### デプロイ手順
+
+#### 1. 前提条件
+
+- Google Cloud CLIインストール済み
+- GCPプロジェクト作成済み
+- 課金アカウント設定済み
+
+#### 2. 認証とプロジェクト設定
+
+```bash
+gcloud auth login
+gcloud config set project [PROJECT_ID]
+gcloud services enable run.googleapis.com
+gcloud services enable artifactregistry.googleapis.com
+gcloud services enable pubsub.googleapis.com
+```
+
+#### 3. Pub/Subセットアップ
+
+```bash
+gcloud pubsub topics create order-confirmed
+gcloud pubsub subscriptions create order-confirmed-sub --topic=order-confirmed
+```
+
+#### 4. 各サービスのデプロイ
+
+```bash
+# デプロイ用ブランチに切り替え
+git checkout feature/add-gcp-deployment
+
+```bash
+# Auth API
+cd auth-api
+gcloud run deploy auth-api --source . --region asia-northeast1 --allow-unauthenticated
+
+# Product API
+cd ../product-api
+gcloud run deploy product-api --source . --region asia-northeast1 --allow-unauthenticated
+
+# Stock API
+cd ../stock-api
+gcloud run deploy stock-api --source . --region asia-northeast1 --allow-unauthenticated
+
+# Order API
+cd ../order-api
+gcloud run deploy order-api --source . --region asia-northeast1 --allow-unauthenticated
+```
+
+#### 5. order-workerのデプロイ
+
+```bash
+cd order_worker
+gcloud builds submit --tag gcr.io/[PROJECT_ID]/order-worker
+gcloud run jobs create order-worker --image gcr.io/[PROJECT_ID]/order-worker --region asia-northeast1 --execute-now
+```
+
+### GCP環境（デプロイ後）
+
+デプロイ後のURLは`gcloud run services list`で確認できます。
+各URLに`/docs`を付けてアクセスしてください。
+
+例: `https://auth-api-[PROJECT_ID].asia-northeast1.run.app/docs`
+
+## セットアップ(ローカル開発環境)
 
 ### 1. 依存パッケージのインストール
 
@@ -97,7 +196,17 @@ pip install -r ../requirements.txt
 
 ```
 
-### 2. 各サービスのデータベースセットアップ
+### 2. Redisの起動
+
+```bash
+# Dockerを使用
+docker run -d -p 6379:6379 --name redis redis:latest
+
+# 起動確認
+docker ps
+```
+
+### 3. 各サービスのデータベースセットアップ
 
 ```bash
 # Auth API
@@ -122,25 +231,30 @@ alembic upgrade head
 各サービスを別々のターミナルで起動してください。
 
 ```bash
-# Auth API
+# ターミナル1: Auth API
 cd auth-api
 python main.py
 # → http://localhost:8004
 
-# Product API
+# ターミナル2: Product API
 cd product-api
 python main.py
 # → http://localhost:8001
 
-# Stock API
+# ターミナル3: Stock API
 cd stock-api
 python main.py
 # → http://localhost:8002
 
-# Order API
+# ターミナル4: Order API
 cd order-api
 python main.py
 # → http://localhost:8003
+
+# ターミナル5: イベント購読（order-worker）
+cd order_worker
+python event_listener.py
+# → イベント購読開始
 ```
 
 各サービスは自動生成されるSwagger UIでAPIを確認できます。
@@ -150,62 +264,26 @@ python main.py
 - Stock API: <http://localhost:8002/docs>
 - Order API: <http://localhost:8003/docs>
 
-## API 使用例
+### イベント駆動の動作確認
 
-### ユーザー登録
-   
-```bash
-curl -X POST http://localhost:8000/auth/signup \
-  -H "Content-Type: application/json" \
-  -d '{"user_name": "testuser", "password": "testpass1234"}'
-```
+1. **商品と在庫を登録**
+   - Product API: 商品作成
+   - Stock API: 在庫登録（例: stock=5）
 
-### ログイン（JWT取得）
+2. **JWTトークンを取得**
+   - Auth API: ユーザー登録→ログイン→JWT取得
 
-```bash
-curl -X POST http://localhost:8000/auth/login \
-  -d "username=testuser&password=testpass1234"
+3. **注文を実行**
+   - JWTをAuthorizationヘッダーにセット
+   - Order API: `/order?product_id=1&quantity=5`
 
-# レスポンス例
-{
-  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "token_type": "bearer"
-}
-```
-
-### 商品登録（Product API）
-
-```bash
-curl -X POST http://localhost:8001/products \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "デスク",
-    "price": "15000",
-    "detail": "木製の学習机",
-    "category_id": 1
-  }'
-```
-
-### 在庫登録（Stock API）
-
-```bash
-curl -X POST http://localhost:8002/stock \
-  -H "Content-Type: application/json" \
-  -d '{
-    "product_id": 1,
-    "stock": 50
-  }'
-```
-
-### 注文（Order API - JWT必須）
-
-```bash
-curl -X POST "http://localhost:8003/order?product_id=1&quantity=2" \
-  -H "Authorization: Bearer {JWT_TOKEN}"
-```
+4. **自動処理を確認**
+   - `order_worker`ターミナルに「イベント受信」ログが表示
+   - Stock API: 在庫が5→0に減少
+   - Product API: statusがtrue→falseに変更（販売中止）
 
 ## 工夫した点・学んだこと
+
 - 非同期通信を利用することでレスポンス速度を向上させた
 
 ## 改善点・今後の課題
-
