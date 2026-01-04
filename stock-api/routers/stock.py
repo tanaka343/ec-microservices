@@ -26,8 +26,8 @@ async def create(db :Dbdependency,create_stock :StockCreate):
   return stock_cruds.create(db,create_stock)
 
 @router.put("/{product_id}",response_model=StockResponse,status_code=status.HTTP_200_OK)
-async def update(product_id :int,db :Dbdependency,update_category :StockUpdate):
-  update_item = stock_cruds.update(product_id,db,update_category)
+async def update(product_id :int,db :Dbdependency,update_stock :StockUpdate):
+  update_item = stock_cruds.update(product_id,db,update_stock)
   if not update_item:
     raise HTTPException(status_code=404,detail=f"商品ID:{product_id}が見つかりません。")
   return update_item
