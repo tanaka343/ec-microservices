@@ -1,7 +1,7 @@
 # 注文システム　マイクロサービス
 
-FastAPIを使用したEcサイトの注文システムのマイクロサービス実装例です。\
-各サービスは独立しており、サービス間通信にはREST APIを使用しています。
+FastAPIを使用したEcサイトの注文システムをマイクロサービス構成で実装しました。\
+各サービスを疎結合に作成しており、非同期に連携させています。
 注文確定時にイベントを発生させ、後続の処理をする仕組みをいれました。
 
 ## 目的
@@ -14,13 +14,13 @@ FastAPIを使用したEcサイトの注文システムのマイクロサービ�
 
 ## アーキテクチャ
 
+### GCP本番環境（Cloud Pub/Sub使用）
+
+![GCP環境構成](images/注文システムアプリ図-GCP版注文システム.drawio%20.png)
+
 ### ローカル開発環境（Redis使用）
 
 ![ローカル環境構成](images/注文システムアプリ図-Redis版注文システム.drawio.png)
-
-### GCP本番環境（Cloud Pub/Sub使用）
-
-![GCP環境構成](images/注文システムアプリ図-GCP版注文システム.drawio.png)
 
 ## 技術スタック
 
@@ -36,6 +36,7 @@ redis（メッセージキュー）\
 
 ```python
 ec-microservice/
+├── gateway-api/       # API Gateway
 ├── auth-api/          # 認証サービス
 ├── product-api/       # 商品管理サービス
 ├── stock-api/         # 在庫管理サービス
@@ -46,14 +47,12 @@ ec-microservice/
 
 ## 各サービスの役割
 
-### Auth API（認証サービス）
+### Gateway API（ルーティング集約）
 
 ポート: 8000
-データベース: user.db
 
-- ユーザー登録（サインアップ）
-- ログイン認証
-- JWT トークン発行・検証
+- ルーティング管理
+- JWT認証の一元化
 
 ### Product API（商品管理サービス）
 
@@ -82,6 +81,15 @@ ec-microservice/
 - 商品在庫確認 → 在庫減算 → 注文記録
 - JWT認証による注文者識別
 
+### Auth API（認証サービス）
+
+ポート: 8004
+データベース: user.db
+
+- ユーザー登録（サインアップ）
+- ログイン認証
+- JWT トークン発行・検証
+
 サービス間連携フロー:
 
 1. JWT トークンから user_id を取得
@@ -92,16 +100,11 @@ ec-microservice/
 　・stock.db在庫を減少
 　・在庫数が0ならば、product.dbのstatusをfalseに変更
 
-エラーハンドリング:
-
-商品が存在しない → ProductNotFoundError\
-商品が販売中止　→ ProductDiscontinuedError\
-在庫不足 → InsufficientStockError
-
 ## GCPデプロイ（本番環境）
 
 ### デプロイ済みサービス（動作確認のみ）
 
+- gateway-api: Cloud Run(ルーティング集約)
 - auth-api: Cloud Run (JWT認証)
 - product-api: Cloud Run (商品管理)
 - stock-api: Cloud Run (在庫管理)
@@ -111,15 +114,15 @@ ec-microservice/
 
 #### Cloud Runコンソール画面
 
-![Cloud Runサービス一覧](images/コンソール画面.png)
+![Cloud Runサービス一覧](images/コンソール2.png)
 
 4つのサービスが正常にデプロイされている状態。
 
 #### 動作確認
 
-![注文](images/注文.png)
-![在庫減少](images/stock-api-stock0.png)
-![販売中止](images/products-false.png)
+![注文](images/order2.png)
+![在庫減少](images/stock2.png)
+![販売中止](images/products2.png)
 
 注文処理により在庫が減少し、在庫ゼロで自動的に販売中止となることを確認。
 
@@ -170,6 +173,11 @@ gcloud run deploy stock-api --source . --region asia-northeast1 --allow-unauthen
 # Order API
 cd ../order-api
 gcloud run deploy order-api --source . --region asia-northeast1 --allow-unauthenticated
+
+# Gateway API
+cd ../gateway-api
+gcloud run deploy gateway-api --source . --region asia-northeast1 --allow-unauthenticated
+
 ```
 
 #### 5. order-workerのデプロイ
@@ -182,10 +190,18 @@ gcloud run jobs create order-worker --image gcr.io/[PROJECT_ID]/order-worker --r
 
 ### GCP環境（デプロイ後）
 
-デプロイ後のURLは`gcloud run services list`で確認できます。
-各URLに`/docs`を付けてアクセスしてください。
+デプロイ後のURLは以下のコマンドで確認できます。\
+各サービスのSwagger UIへは各URLに`/docs`を付けてアクセスしてください。
+```bash
+# URL一覧確認
+gcloud run services list --region asia-northeast1
+```
+API Gatewayでは、単一エントリーポイントで全てのAPIにアクセスできます。
+```bash
+# API Gateway
+https://gateway-api-[PROJECT_ID].asia-northeast1.run.app/docs
 
-例: `https://auth-api-[PROJECT_ID].asia-northeast1.run.app/docs`
+```
 
 ## セットアップ(ローカル開発環境)
 
@@ -231,25 +247,31 @@ alembic upgrade head
 各サービスを別々のターミナルで起動してください。
 
 ```bash
-# ターミナル1: Auth API
-cd auth-api
-python main.py
-# → http://localhost:8004
 
-# ターミナル2: Product API
+# ターミナル1: Product API
 cd product-api
 python main.py
 # → http://localhost:8001
 
-# ターミナル3: Stock API
+# ターミナル2: Stock API
 cd stock-api
 python main.py
 # → http://localhost:8002
 
-# ターミナル4: Order API
+# ターミナル3: Order API
 cd order-api
 python main.py
 # → http://localhost:8003
+
+# ターミナル4: Auth API
+cd auth-api
+python main.py
+# → http://localhost:8004
+
+# ターミナル5: Gateway API
+cd gateway-api
+python uvicorn main:app
+# → http://localhost:8000
 
 # ターミナル5: イベント購読（order-worker）
 cd order_worker
@@ -259,10 +281,11 @@ python event_listener.py
 
 各サービスは自動生成されるSwagger UIでAPIを確認できます。
 
-- Auth API: <http://localhost:8000/docs>
 - Product API: <http://localhost:8001/docs>
 - Stock API: <http://localhost:8002/docs>
 - Order API: <http://localhost:8003/docs>
+- Auth API: <http://localhost:8004/docs>
+- Gateway API: <http://localhost:8000/docs>
 
 ### イベント駆動の動作確認
 
@@ -290,6 +313,6 @@ python event_listener.py
 
 ## 改善点・今後の課題
 
-- API Gateway導入
-- 監視・ログ集約
-- CI/CD自動化
+- [x] API Gateway導入
+- [ ]監視・ログ集約
+- [ ]CI/CD自動化
