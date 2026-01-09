@@ -42,23 +42,6 @@ async def fetch_product(product_id :int) -> dict:
                 raise ProductNotFoundError(f"商品ID:{product_id}の商品が見つかりません。")
             return await response.json()
 
-async def ensure_product_exists(product_id :int):
-    """販売中であることを保証する
-
-    指定された商品IDが販売中であることを確認する
-    販売中止の場合はエラーをだす
-
-    Args:
-        product_id: 商品ID
-    
-    Raises:
-        ProductNotFoundError: 商品が存在しない場合
-    """
-    product =  await fetch_product(product_id)
-    if product['status']==False:
-        raise ProductDiscontinuedError(f"商品ID：{product_id}は販売中止です。")
-
-
 async def fetch_stock(product_id :int):
     """在庫情報をstock-apiから取得する
 
@@ -81,6 +64,22 @@ async def fetch_stock(product_id :int):
             if response.status != 200:
                 raise ProductNotFoundError(f"商品ID:{product_id}に在庫が見つかりません。")
             return await response.json()
+        
+async def ensure_product_exists(product_id :int):
+    """販売中であることを保証する
+
+    指定された商品IDが販売中であることを確認する
+    販売中止の場合はエラーをだす
+
+    Args:
+        product_id: 商品ID
+    
+    Raises:
+        ProductNotFoundError: 商品が存在しない場合
+    """
+    product =  await fetch_product(product_id)
+    if product['status']==False:
+        raise ProductDiscontinuedError(f"商品ID：{product_id}は販売中止です。")
 
 async def ensure_stock_exists(product_id :int):
     """在庫数が存在することを確認し、在庫数を返す
@@ -189,9 +188,9 @@ def publish_order_confirmed(product_id :int,stock :int,quantity :int):
 
 
 async def order_confirm(db :Session,product_id :int,quantity :int,user_id :int) -> dict:
-    """注文処理
+    """注文を確定する
     
-    販売状況と在庫を確認し、注文データを保存、イベントを発行
+    販売状況と在庫を確認し、問題がなければ、注文データを保存後イベントを発行する
 
     Args:
         db: データベースセッション

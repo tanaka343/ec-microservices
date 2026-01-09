@@ -18,6 +18,27 @@ api_key_header = APIKeyHeader(name="Authorization")
 
 @router.post("",response_model=OrderResponse,status_code=status.HTTP_201_CREATED)
 async def order_confirm(db :Dbdependency,product_id :int,quantity :int,authorization: str = Depends(api_key_header)):
+  """JWT検証をして注文を確定するAPIエンドポイント
+
+  JWT検証を行って、正常な場合は注文確定処理を実行する
+  業務例外はHTTPエラーに変換して返却する
+
+  Args:
+        db: データベースセッション
+        product_id: 商品ID
+        quantity: 注文数
+        authorization: Bearerトークン
+        
+    Returns:
+        new_order: 作成された注文情報
+        
+    Raises:
+        HTTPException:
+            - トークンが不正な場合
+            - 商品が存在しない場合
+            - 商品が販売中止の場合
+            - 在庫が不足している場合
+  """
   token = authorization.replace("Bearer ", "")
   try:
     payload = jwt.decode(token,SECRET_KEY,algorithms=ALGORISM)

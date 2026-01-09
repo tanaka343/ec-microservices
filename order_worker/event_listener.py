@@ -1,6 +1,5 @@
 import redis
 import json
-import requests
 import aiohttp
 import asyncio
 from google.cloud import pubsub_v1
@@ -13,7 +12,18 @@ from google.cloud import pubsub_v1
 project_id = 'ec-microservices-demo'
 subscription_id = 'order-confirmed-sub'
 
+# 外部接続
 async def update_stock(product_id :int,new_stock :int):
+    """在庫の更新を外部APIに依頼する
+
+    外部APIにアクセスして在庫情報を更新する
+    更新を失敗した場合は、レスポンスをテキストで出力し、イベント処理全体は継続する
+
+    Args:
+        product_id: 商品ID
+        new_stock: 在庫数－注文数
+        
+    """
     async with aiohttp.ClientSession() as session:
         async with session.put(
             f"https://stock-api-987336615042.asia-northeast1.run.app/stock/{product_id}",
@@ -26,6 +36,18 @@ async def update_stock(product_id :int,new_stock :int):
 
     
 async def update_product_status(product_id :int):
+    """販売状況の更新を外部APIに依頼する
+
+    外部APIにアクセスして販売状況を更新する
+    更新を失敗した場合は、エラーを出す(致命的な失敗として扱う)
+
+    Args:
+        product_id: 商品ID
+        
+    Raises:
+        Exception: 販売状況を更新できない場合
+    
+    """
     async with aiohttp.ClientSession() as session:
         async with session.put(
             f"https://product-api-987336615042.asia-northeast1.run.app/products/{product_id}",
