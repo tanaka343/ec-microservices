@@ -9,8 +9,9 @@ app = FastAPI()
 FormDependency = Annotated[OAuth2PasswordRequestForm,Depends()]
 api_key_header = APIKeyHeader(name="Authorization")
 
-
-
+# ====================
+# product-api
+# ====================
 @app.get("/products", tags=['products'])
 def get_products():
     response = requests.get(
@@ -34,6 +35,9 @@ def update_product(id :int,update_item :ItemUpdate):
     )
     return response.json()
 
+# ====================
+# stock-api
+# ====================
 @app.get("/stock",tags=['stock'])
 def get_stock():
     response = requests.get(
@@ -57,8 +61,17 @@ def update_stock(id :int,update_stock :StockUpdate):
     )
     return response.json()
 
+# ====================
+# auth-api
+# ====================
 @app.post("/login",tags=['auth'])
 def login(form_data:FormDependency):
+    """ログインリクエストをauth-apiに中継する
+    
+    フォームからユーザー名とパスワードを取得して、
+    auth-apiにログイン処理を委譲する
+    JWTの発行はauth-api側で行われる
+    """
     username=form_data.username
     password=form_data.password
     response = requests.post(
@@ -69,14 +82,32 @@ def login(form_data:FormDependency):
 
 @app.post("/signup",tags=['auth'])
 def signup(user_create :CreateUser):
+    """ユーザー作成リクエストをauth-apiに中継する
+
+    リクエストボディからユーザー情報を取得して、
+    auth-apiにユーザー作成処理を委譲する
+    
+    """
     response = requests.post(
         f"https://auth-api-987336615042.asia-northeast1.run.app/auth/signup",
         json=user_create.model_dump()
     )
     return response.json()
 
+# ====================
+# order-api
+# ====================
 @app.post("/order",tags=['order'])
 def order(product_id:int,quantity:int,authorization: str = Depends(api_key_header)):
+    """注文APIへのリクエストを中継する
+
+    注文確定処理を order-api に委譲する
+    注文確定後に発行されるイベントを契機として、
+    在庫更新や販売状況更新は各サービス側で行われる
+
+    Gatewayでは処理は行わない
+
+    """
     response = requests.post(
         f"https://order-api-987336615042.asia-northeast1.run.app/order?product_id={product_id}&quantity={quantity}",
         headers={'Authorization':authorization}
