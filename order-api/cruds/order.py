@@ -4,16 +4,22 @@ from datetime import datetime
 import aiohttp
 import redis
 import json
+from jose import jwt,JWTError
 
 redis_client = redis.Redis(host='localhost',port=6379,decode_responses=True)
 
 class ProductNotFoundError(Exception):
+    """商品が見つからない"""
     pass
 class InsufficientStockError(Exception):
+    """在庫不足"""
     pass
 class ProductDiscontinuedError(Exception):
+    """商品が販売中止"""
     pass
-
+class InvalidTokenError(Exception):
+    """トークンが不正"""
+    pass
 
 async def fetch_product(product_id :int) -> dict:
     """商品情報をproduct-apiから取得する
@@ -210,3 +216,27 @@ async def order_confirm(db :Session,product_id :int,quantity :int,user_id :int) 
     return new_order
 
 
+SECRET_KEY = "3FIQodO54obEzChoXmZFaprULmWd1KkYqc5GbITvYwA="
+ALGORISM = "HS256"
+def verify_token(authorization):
+    """トークンを検証し、user_idを取得する
+    
+    authorizationのペイロードを検証してuser_idを取得し、返却する
+    トークンが不正、もしくは必要な情報が含まれていない場合は、エラーを出す
+
+    Args:
+        authorization: Bearerトークン
+    Returns:
+        user_id: ペイロードから取得したuser_id
+        
+    Raises:
+        InvalidTokenError トークンが不正な場合
+    """
+    token = authorization.replace("Bearer ", "")
+    try:
+        payload = jwt.decode(token,SECRET_KEY,algorithms=ALGORISM)
+        user_id = payload["id"]
+    except (JWTError, KeyError):
+        raise InvalidTokenError(f'トークンが不正です')
+
+    return user_id
