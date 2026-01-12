@@ -5,6 +5,7 @@ from typing import Annotated
 from cruds import stock as stock_cruds
 from schemas import StockCreate,StockResponse,StockUpdate
 from starlette import status
+from cruds.stock import ProductNotFoundError
 
 router = APIRouter(prefix="/stock",tags=["stock"])
 
@@ -16,10 +17,11 @@ async def find_all(db :Dbdependency):
 
 @router.get("/{product_id}",response_model=StockResponse,status_code=status.HTTP_200_OK)
 async def find_by_id(product_id :int,db :Dbdependency):
-  found_item = stock_cruds.find_by_id(product_id,db)
-  if not found_item:
-    raise HTTPException(status_code=404,detail=f"商品ID:{product_id}が見つかりません。")
-  return found_item
+  try:
+    return stock_cruds.find_by_id(product_id,db)
+  except ProductNotFoundError as e:
+    raise HTTPException(status_code=404,detail=str(e))
+  
 
 @router.post("",response_model=StockResponse,status_code=status.HTTP_201_CREATED)
 async def create(db :Dbdependency,create_stock :StockCreate):
@@ -27,14 +29,14 @@ async def create(db :Dbdependency,create_stock :StockCreate):
 
 @router.put("/{product_id}",response_model=StockResponse,status_code=status.HTTP_200_OK)
 async def update(product_id :int,db :Dbdependency,update_stock :StockUpdate):
-  update_item = stock_cruds.update(product_id,db,update_stock)
-  if not update_item:
-    raise HTTPException(status_code=404,detail=f"商品ID:{product_id}が見つかりません。")
-  return update_item
+  try:
+    return stock_cruds.update(product_id,db,update_stock)
+  except ProductNotFoundError as e:
+    raise HTTPException(status_code=404,detail=str(e))
 
 @router.delete("/{product_id}",response_model=StockResponse,status_code=status.HTTP_200_OK)
 async def delete(product_id :int,db :Dbdependency):
-  delete_item = stock_cruds.delete(product_id,db)
-  if not delete_item:
-    raise HTTPException(status_code=404,detail=f"商品ID:{product_id}が見つかりません。")
-  return delete_item
+  try:
+    return stock_cruds.delete(product_id,db)
+  except ProductNotFoundError as e:
+    raise HTTPException(status_code=404,detail=str(e))
