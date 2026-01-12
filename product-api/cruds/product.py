@@ -4,15 +4,23 @@ from sqlalchemy.orm import Session
 from models import Item
 from schemas import ItemCreate,ItemUpdate
 
+class ProductNotFoundError(Exception):
+    """商品が見つからない"""
+    pass
 
 def find_all(db :Session ):
     return db.query(Item).order_by(Item.id).all()
 
 def find_by_id(id :int,db :Session ):
-   return db.query(Item).filter(Item.id == id).first()
+    item = db.query(Item).filter(Item.id == id).first()
+    if not item:
+        raise ProductNotFoundError(f'商品ID：{id}が見つかりません')
+    return item
 
 def find_by_name(name :str,db :Session):
-    return db.query(Item).filter(Item.name == name).all()
+    item = db.query(Item).filter(Item.name == name).all()
+    if not item:
+        raise ProductNotFoundError(f'商品名：{name}が見つかりません')
 
 def create(create_item :ItemCreate,db :Session):
 
@@ -25,10 +33,7 @@ def create(create_item :ItemCreate,db :Session):
 
    
 def update(id :int,update_item :ItemUpdate,db :Session):
-    item = db.query(Item).filter(Item.id == id).first()
-    
-    if item is None:
-        return None
+    item = find_by_id(id,db)
     
     item.name =item.name if update_item.name is None else update_item.name
     item.price =item.price if update_item.price is None else update_item.price
@@ -42,8 +47,6 @@ def update(id :int,update_item :ItemUpdate,db :Session):
 
 def deleate(id :int,db :Session):
     item = find_by_id(id,db)
-    if item is None:
-       return None
     db.delete(item)
     db.commit()
     return item
