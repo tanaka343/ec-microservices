@@ -1,38 +1,73 @@
-from fastapi import FastAPI,Depends,APIRouter
+from fastapi import FastAPI,Depends,APIRouter,HTTPException
 import requests
 from fastapi.security import OAuth2PasswordRequestForm,APIKeyHeader
 from typing import Annotated,Optional
 from pydantic import BaseModel,Field
 from schemas import CreateUser,ItemCreate,ItemUpdate,StockCreate,StockUpdate
+from requests.exceptions import RequestException
 
 app = FastAPI()
 FormDependency = Annotated[OAuth2PasswordRequestForm,Depends()]
 api_key_header = APIKeyHeader(name="Authorization")
+
+# 共通エラー関数
+def raise_if_error_response(response,service_name:str):
+    if response.status_code >=400:
+        try:
+            detail=response.json().get('detail','不明なエラー')
+        except ValueError:
+            detail='不明エラー'
+        raise HTTPException(
+            status_code=response.status_code,
+            detail={
+                "service":service_name,
+                "message":detail}
+        )
+def handle_requesterror(service_name:str):
+    raise HTTPException(status_code=503,detail=f"{service_name}に接続できません")
+
+
 
 # ====================
 # product-api
 # ====================
 @app.get("/products", tags=['products'])
 def get_products():
-    response = requests.get(
-        f"https://product-api-987336615042.asia-northeast1.run.app/products"
-    )
+    try:
+        response = requests.get(
+            "http://localhost:8001/products"
+        )
+        
+    except RequestException:
+        handle_requesterror('product_api')
+    raise_if_error_response(response,'product_api')
+
     return response.json()
+
+
 
 @app.post("/products",tags=['products'])
 def create_product(create_item :ItemCreate):
-    response = requests.post(
-        f"https://product-api-987336615042.asia-northeast1.run.app/products",
-        json=create_item.model_dump()
-    )
+    try:
+        response = requests.post(
+            "http://localhost:8001/products",
+            json=create_item.model_dump()
+        )
+    except RequestException:
+        handle_requesterror('product_api')
+    raise_if_error_response(response,'product-api')
     return response.json()
 
 @app.put("/products/{id}",tags=['products'])
 def update_product(id :int,update_item :ItemUpdate):
-    response = requests.put(
-        f"https://product-api-987336615042.asia-northeast1.run.app/products/{id}",
+    try:
+        response = requests.put(
+        f"http://localhost:8001/products/{id}",
         json=update_item.model_dump()    
     )
+    except RequestException:
+        handle_requesterror('product-api')
+    raise_if_error_response(response,'product-api')
     return response.json()
 
 # ====================
@@ -40,25 +75,37 @@ def update_product(id :int,update_item :ItemUpdate):
 # ====================
 @app.get("/stock",tags=['stock'])
 def get_stock():
-    response = requests.get(
-        f"https://stock-api-987336615042.asia-northeast1.run.app/stock"
-    )
+    try:
+        response = requests.get(
+            "http://localhost:8002/stock"
+        )
+    except RequestException:
+        handle_requesterror('stock-api')
+    raise_if_error_response(response,'stock-api')
     return response.json()
 
 @app.post("/stock",tags=['stock'])
 def create_stock(create_stock :StockCreate):
-    response = requests.post(
-        f"https://stock-api-987336615042.asia-northeast1.run.app/stock",
+    try:
+        response = requests.post(
+        "http://localhost:8002/stock",
         json=create_stock.model_dump()
     )
+    except RequestException:
+        handle_requesterror('stock-api')
+    raise_if_error_response(response,'stock-api')
     return response.json()
 
 @app.put("/stock",tags=['stock'])
 def update_stock(id :int,update_stock :StockUpdate):
-    response = requests.put(
-        f"https://stock-api-987336615042.asia-northeast1.run.app/stock{id}",
+    try:
+        response = requests.put(
+        f"http://localhost:8002/stock/{id}",
         json=update_stock.model_dump()
     )
+    except RequestException:
+        handle_requesterror('stock-api')
+    raise_if_error_response(response,'stock-api')
     return response.json()
 
 # ====================
@@ -74,10 +121,14 @@ def login(form_data:FormDependency):
     """
     username=form_data.username
     password=form_data.password
-    response = requests.post(
-        f"https://auth-api-987336615042.asia-northeast1.run.app/auth/login",
+    try:
+        response = requests.post(
+        "http://localhost:8004/auth/login",
         data={'username':username,'password':password}
     )
+    except RequestException:
+        handle_requesterror('auth-api')
+    raise_if_error_response(response,'auth-api')
     return response.json()
 
 @app.post("/signup",tags=['auth'])
@@ -88,10 +139,14 @@ def signup(user_create :CreateUser):
     auth-apiにユーザー作成処理を委譲する
     
     """
-    response = requests.post(
-        f"https://auth-api-987336615042.asia-northeast1.run.app/auth/signup",
+    try:
+        response = requests.post(
+        "http://localhost:8004/auth/signup",
         json=user_create.model_dump()
     )
+    except RequestException:
+        handle_requesterror('auth-api')
+    raise_if_error_response(response,'auth-api')
     return response.json()
 
 # ====================
@@ -108,8 +163,12 @@ def order(product_id:int,quantity:int,authorization: str = Depends(api_key_heade
     Gatewayでは処理は行わない
 
     """
-    response = requests.post(
-        f"https://order-api-987336615042.asia-northeast1.run.app/order?product_id={product_id}&quantity={quantity}",
+    try:
+        response = requests.post(
+        f"http://localhost:8003/order?product_id={product_id}&quantity={quantity}",
         headers={'Authorization':authorization}
     )
+    except RequestException:
+        handle_requesterror('order-api')
+    raise_if_error_response(response,'order-api')
     return response.json()
