@@ -35,7 +35,7 @@ def handle_requesterror(service_name:str):
 def get_products():
     try:
         response = requests.get(
-            "http://localhost:8001/products"
+            f"https://product-api-987336615042.asia-northeast1.run.app/products"
         )
         
     except RequestException:
@@ -50,7 +50,7 @@ def get_products():
 def create_product(create_item :ItemCreate):
     try:
         response = requests.post(
-            "http://localhost:8001/products",
+            f"https://product-api-987336615042.asia-northeast1.run.app/products",
             json=create_item.model_dump()
         )
     except RequestException:
@@ -62,7 +62,7 @@ def create_product(create_item :ItemCreate):
 def update_product(id :int,update_item :ItemUpdate):
     try:
         response = requests.put(
-        f"http://localhost:8001/products/{id}",
+        f"https://product-api-987336615042.asia-northeast1.run.app/products/{id}",
         json=update_item.model_dump()    
     )
     except RequestException:
@@ -77,7 +77,7 @@ def update_product(id :int,update_item :ItemUpdate):
 def get_stock():
     try:
         response = requests.get(
-            "http://localhost:8002/stock"
+            f"https://stock-api-987336615042.asia-northeast1.run.app/stock"
         )
     except RequestException:
         handle_requesterror('stock-api')
@@ -88,7 +88,7 @@ def get_stock():
 def create_stock(create_stock :StockCreate):
     try:
         response = requests.post(
-        "http://localhost:8002/stock",
+        f"https://stock-api-987336615042.asia-northeast1.run.app/stock",
         json=create_stock.model_dump()
     )
     except RequestException:
@@ -96,11 +96,11 @@ def create_stock(create_stock :StockCreate):
     raise_if_error_response(response,'stock-api')
     return response.json()
 
-@app.put("/stock",tags=['stock'])
+@app.put("/stock/{id}",tags=['stock'])
 def update_stock(id :int,update_stock :StockUpdate):
     try:
         response = requests.put(
-        f"http://localhost:8002/stock/{id}",
+        f"https://stock-api-987336615042.asia-northeast1.run.app/stock/{id}",
         json=update_stock.model_dump()
     )
     except RequestException:
@@ -123,7 +123,7 @@ def login(form_data:FormDependency):
     password=form_data.password
     try:
         response = requests.post(
-        "http://localhost:8004/auth/login",
+        f"https://auth-api-987336615042.asia-northeast1.run.app/auth/login",
         data={'username':username,'password':password}
     )
     except RequestException:
@@ -141,7 +141,7 @@ def signup(user_create :CreateUser):
     """
     try:
         response = requests.post(
-        "http://localhost:8004/auth/signup",
+        f"https://auth-api-987336615042.asia-northeast1.run.app/auth/signup",
         json=user_create.model_dump()
     )
     except RequestException:
@@ -165,7 +165,7 @@ def order(product_id:int,quantity:int,authorization: str = Depends(api_key_heade
     """
     try:
         response = requests.post(
-        f"http://localhost:8003/order?product_id={product_id}&quantity={quantity}",
+        f"https://order-api-987336615042.asia-northeast1.run.app/order?product_id={product_id}&quantity={quantity}",
         headers={'Authorization':authorization}
     )
     except RequestException:
