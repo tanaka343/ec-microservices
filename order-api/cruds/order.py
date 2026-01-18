@@ -242,7 +242,7 @@ def verify_token(authorization):
     """
     token = authorization.replace("Bearer ", "")
     try:
-        payload = jwt.decode(token,SECRET_KEY,algorithms=ALGORISM)
+        payload = jwt.decode(token,SECRET_KEY,algorithms=ALGORITHM)
         user_id = payload["id"]
     except (JWTError, KeyError):
         raise InvalidTokenError(f'トークンが不正です')

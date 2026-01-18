@@ -61,12 +61,12 @@ def login(db :Session,user_name :str,password :str):
 def create_access_token(user_name :str,user_id :int,expires_delta :timedelta):
     expires = datetime.now() + expires_delta
     payload = {"sub" :user_name,"id" :user_id,"exp" :expires}
-    return jwt.encode(payload,SECRET_KEY,algorithm=ALGORISM)
+    return jwt.encode(payload,SECRET_KEY,algorithm=ALGORITHM)
 
 oath2_schema = OAuth2PasswordBearer(tokenUrl="/auth/login")
 def get_current_user(token :Annotated[str,Depends(oath2_schema)]):
     try:
-        payload = jwt.decode(token,SECRET_KEY,algorithm=ALGORISM)
+        payload = jwt.decode(token,SECRET_KEY,algorithm=ALGORITHM)
         user_name = payload.get("sub")
         user_id = payload.get("id")
         if user_name is None or user_id is None:
