@@ -10,6 +10,12 @@ from fastapi.security import OAuth2PasswordBearer
 from typing import Annotated
 from fastapi import Depends
 from sqlalchemy.exc import IntegrityError
+from dotenv import load_dotenv
+
+load_dotenv()
+
+SECRET_KEY = os.getenv("SECRET_KEY")
+ALGORITHM = os.getenv("ALGORITHM")
 
 class UserAlreadyExistsError(Exception):
     """ユーザーが既に存在"""
@@ -51,8 +57,7 @@ def login(db :Session,user_name :str,password :str):
         raise InvalidCredentialsError(f'パスワードが正しくありません')
     return user
 
-SECRET_KEY = "3FIQodO54obEzChoXmZFaprULmWd1KkYqc5GbITvYwA="
-ALGORISM = "HS256"
+
 def create_access_token(user_name :str,user_id :int,expires_delta :timedelta):
     expires = datetime.now() + expires_delta
     payload = {"sub" :user_name,"id" :user_id,"exp" :expires}

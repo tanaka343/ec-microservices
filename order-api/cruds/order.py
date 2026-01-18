@@ -2,10 +2,16 @@ from models import Order
 from sqlalchemy.orm import Session
 from datetime import datetime
 import aiohttp
-import redis
 import json
 from google.cloud import pubsub_v1
 from jose import jwt,JWTError
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+SECRET_KEY = os.getenv("SECRET_KEY")
+ALGORITHM = os.getenv("ALGORITHM")
 
 # redis_client = redis.Redis(host='localhost',port=6379,decode_responses=True)
 publisher = pubsub_v1.PublisherClient()
@@ -220,8 +226,6 @@ async def order_confirm(db :Session,product_id :int,quantity :int,user_id :int) 
     return new_order
 
 
-SECRET_KEY = "3FIQodO54obEzChoXmZFaprULmWd1KkYqc5GbITvYwA="
-ALGORISM = "HS256"
 def verify_token(authorization):
     """トークンを検証し、user_idを取得する
     
