@@ -7,5 +7,4 @@ requests
 python-jose[cryptography]
 python-multipart
 aiohttp
-redis
 google-cloud-pubsub

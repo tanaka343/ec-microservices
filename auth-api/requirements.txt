@@ -7,4 +7,4 @@ requests
 python-jose[cryptography]
 python-multipart
 aiohttp
-redis
+python-dotenv
