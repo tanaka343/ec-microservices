@@ -4,7 +4,16 @@ FastAPIを使用したEcサイトの注文システムをマイクロサービ�
 各サービスを疎結合に作成しており、非同期に連携させています。
 注文確定時にイベントを発生させ、後続の処理をする仕組みをいれました。
 
+## デモURL
+
+- gateway-api: https://gateway-api-987336615042.asia-northeast1.run.app/docs
+- product-api: https://product-api-987336615042.asia-northeast1.run.app/docs
+- stock-api: https://stock-api-987336615042.asia-northeast1.run.app/docs
+- order-api: https://order-api-987336615042.asia-northeast1.run.app/docs
+- auth-api: https://auth-api-987336615042.asia-northeast1.run.app/docs
+
 ## ブランチ構成
+
 - main：ローカル開発・検証用
 - deploy：デプロイ環境用（クラウド向け設定を含む）
 
@@ -106,7 +115,7 @@ ec-microservice/
 
 ## GCPデプロイ（本番環境）
 
-### デプロイ済みサービス（動作確認のみ）
+### デプロイ済みサービス(稼働中)
 
 - gateway-api: Cloud Run(ルーティング集約)
 - auth-api: Cloud Run (JWT認証)
@@ -130,6 +139,24 @@ ec-microservice/
 
 注文処理により在庫が減少し、在庫ゼロで自動的に販売中止となることを確認。
 
+## イベント駆動の動作確認方法
+
+1. ユーザー登録とログイン
+    - gateway-api/auth-api: ユーザー登録（例: username=testuser, password=test1234）
+    - gateway-api/auth-apiI: ログインしてJWTを取得
+  
+2. **商品と在庫を登録**
+   - Product API: 商品作成
+   - Stock API: 在庫登録（例: stock=5）
+
+3. **注文を実行**
+   - JWTをAuthorizationヘッダーにセット
+   - Order API: `/order?product_id=1&quantity=5`
+
+4. **自動処理を確認**
+   - Stock API: 在庫が5→0に減少
+   - Product API: 在庫が0になったら、statusがtrue→falseに変更（販売中止）
+  
 ### デプロイ手順
 
 #### 1. 前提条件
@@ -164,7 +191,7 @@ git checkout feature/add-gcp-deployment
 ```bash
 # Auth API
 cd auth-api
-gcloud run deploy auth-api --source . --region asia-northeast1 --allow-unauthenticated
+gcloud run deploy auth-api --source . --region asia-northeast1 --allow-unauthenticated --set-env-vars ALGORITHM=HS256 --set-env-vars SECRET_KEY='your_secret_key'
 
 # Product API
 cd ../product-api
@@ -176,7 +203,7 @@ gcloud run deploy stock-api --source . --region asia-northeast1 --allow-unauthen
 
 # Order API
 cd ../order-api
-gcloud run deploy order-api --source . --region asia-northeast1 --allow-unauthenticated
+gcloud run deploy order-api --source . --region asia-northeast1 --allow-unauthenticated --set-env-vars ALGORITHM=HS256 --set-env-vars SECRET_KEY='your_secret_key'
 
 # Gateway API
 cd ../gateway-api
@@ -196,11 +223,14 @@ gcloud run jobs create order-worker --image gcr.io/[PROJECT_ID]/order-worker --r
 
 デプロイ後のURLは以下のコマンドで確認できます。\
 各サービスのSwagger UIへは各URLに`/docs`を付けてアクセスしてください。
+
 ```bash
 # URL一覧確認
 gcloud run services list --region asia-northeast1
 ```
+
 API Gatewayでは、単一エントリーポイントで全てのAPIにアクセスできます。
+
 ```bash
 # API Gateway
 https://gateway-api-[PROJECT_ID].asia-northeast1.run.app/docs
@@ -290,24 +320,6 @@ python event_listener.py
 - Order API: <http://localhost:8003/docs>
 - Auth API: <http://localhost:8004/docs>
 - Gateway API: <http://localhost:8000/docs>
-
-### イベント駆動の動作確認
-
-1. **商品と在庫を登録**
-   - Product API: 商品作成
-   - Stock API: 在庫登録（例: stock=5）
-
-2. **JWTトークンを取得**
-   - Auth API: ユーザー登録→ログイン→JWT取得
-
-3. **注文を実行**
-   - JWTをAuthorizationヘッダーにセット
-   - Order API: `/order?product_id=1&quantity=5`
-
-4. **自動処理を確認**
-   - `order_worker`ターミナルに「イベント受信」ログが表示
-   - Stock API: 在庫が5→0に減少
-   - Product API: statusがtrue→falseに変更（販売中止）
 
 ## 工夫した点・学んだこと
 
