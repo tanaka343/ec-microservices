@@ -1,8 +1,21 @@
 # 注文システム　マイクロサービス
 
-FastAPIを使用したEcサイトの注文システムのマイクロサービス実装例です。\
-各サービスは独立しており、サービス間通信にはREST APIを使用しています。
+FastAPIを使用したEcサイトの注文システムをマイクロサービス構成で実装しました。\
+各サービスを疎結合に作成しており、非同期に連携させています。
 注文確定時にイベントを発生させ、後続の処理をする仕組みをいれました。
+
+## デモURL
+
+- gateway-api: https://gateway-api-987336615042.asia-northeast1.run.app/docs
+- product-api: https://product-api-987336615042.asia-northeast1.run.app/docs
+- stock-api: https://stock-api-987336615042.asia-northeast1.run.app/docs
+- order-api: https://order-api-987336615042.asia-northeast1.run.app/docs
+- auth-api: https://auth-api-987336615042.asia-northeast1.run.app/docs
+
+## ブランチ構成
+
+- main：ローカル開発・検証用
+- deploy：デプロイ環境用（クラウド向け設定を含む）
 
 ## 目的
 
@@ -11,6 +24,16 @@ FastAPIを使用したEcサイトの注文システムのマイクロサービ�
 - イベント駆動での連携理解と実装
 - 同期非同期通信の理解
 - メッセージキューの導入
+
+## アーキテクチャ
+
+### GCP本番環境（Cloud Pub/Sub使用）
+
+![GCP環境構成](images/注文システムアプリ図-GCP版注文システム.drawio%20.png)
+
+### ローカル開発環境（Redis使用）
+
+![ローカル環境構成](images/注文システムアプリ図-Redis版注文システム.drawio.png)
 
 ## 技術スタック
 
@@ -26,6 +49,7 @@ redis（メッセージキュー）\
 
 ```python
 ec-microservice/
+├── gateway-api/       # API Gateway
 ├── auth-api/          # 認証サービス
 ├── product-api/       # 商品管理サービス
 ├── stock-api/         # 在庫管理サービス
@@ -36,14 +60,12 @@ ec-microservice/
 
 ## 各サービスの役割
 
-### Auth API（認証サービス）
+### Gateway API（ルーティング集約）
 
 ポート: 8000
-データベース: user.db
 
-- ユーザー登録（サインアップ）
-- ログイン認証
-- JWT トークン発行・検証
+- ルーティング管理
+- JWT認証の一元化
 
 ### Product API（商品管理サービス）
 
@@ -72,6 +94,15 @@ ec-microservice/
 - 商品在庫確認 → 在庫減算 → 注文記録
 - JWT認証による注文者識別
 
+### Auth API（認証サービス）
+
+ポート: 8004
+データベース: user.db
+
+- ユーザー登録（サインアップ）
+- ログイン認証
+- JWT トークン発行・検証
+
 サービス間連携フロー:
 
 1. JWT トークンから user_id を取得
@@ -82,13 +113,131 @@ ec-microservice/
 　・stock.db在庫を減少
 　・在庫数が0ならば、product.dbのstatusをfalseに変更
 
-エラーハンドリング:
+## GCPデプロイ（本番環境）
 
-商品が存在しない → ProductNotFoundError\
-商品が販売中止　→ ProductDiscontinuedError\
-在庫不足 → InsufficientStockError
+### デプロイ済みサービス(稼働中)
 
-## セットアップ
+- gateway-api: Cloud Run(ルーティング集約)
+- auth-api: Cloud Run (JWT認証)
+- product-api: Cloud Run (商品管理)
+- stock-api: Cloud Run (在庫管理)
+- order-api: Cloud Run (注文処理)
+- order-worker: Cloud Run Jobs (イベント購読)
+- メッセージキュー: Cloud Pub/Sub
+
+#### Cloud Runコンソール画面
+
+![Cloud Runサービス一覧](images/コンソール2.png)
+
+4つのサービスが正常にデプロイされている状態。
+
+#### 動作確認
+
+![注文](images/order2.png)
+![在庫減少](images/stock2.png)
+![販売中止](images/products2.png)
+
+注文処理により在庫が減少し、在庫ゼロで自動的に販売中止となることを確認。
+
+## イベント駆動の動作確認方法
+
+1. ユーザー登録とログイン
+    - gateway-api/auth-api: ユーザー登録（例: username=testuser, password=test1234）
+    - gateway-api/auth-apiI: ログインしてJWTを取得
+  
+2. **商品と在庫を登録**
+   - Product API: 商品作成
+   - Stock API: 在庫登録（例: stock=5）
+
+3. **注文を実行**
+   - JWTをAuthorizationヘッダーにセット
+   - Order API: `/order?product_id=1&quantity=5`
+
+4. **自動処理を確認**
+   - Stock API: 在庫が5→0に減少
+   - Product API: 在庫が0になったら、statusがtrue→falseに変更（販売中止）
+  
+### デプロイ手順
+
+#### 1. 前提条件
+
+- Google Cloud CLIインストール済み
+- GCPプロジェクト作成済み
+- 課金アカウント設定済み
+
+#### 2. 認証とプロジェクト設定
+
+```bash
+gcloud auth login
+gcloud config set project [PROJECT_ID]
+gcloud services enable run.googleapis.com
+gcloud services enable artifactregistry.googleapis.com
+gcloud services enable pubsub.googleapis.com
+```
+
+#### 3. Pub/Subセットアップ
+
+```bash
+gcloud pubsub topics create order-confirmed
+gcloud pubsub subscriptions create order-confirmed-sub --topic=order-confirmed
+```
+
+#### 4. 各サービスのデプロイ
+
+```bash
+# デプロイ用ブランチに切り替え
+git checkout feature/add-gcp-deployment
+
+```bash
+# Auth API
+cd auth-api
+gcloud run deploy auth-api --source . --region asia-northeast1 --allow-unauthenticated --set-env-vars ALGORITHM=HS256 --set-env-vars SECRET_KEY='your_secret_key'
+
+# Product API
+cd ../product-api
+gcloud run deploy product-api --source . --region asia-northeast1 --allow-unauthenticated
+
+# Stock API
+cd ../stock-api
+gcloud run deploy stock-api --source . --region asia-northeast1 --allow-unauthenticated
+
+# Order API
+cd ../order-api
+gcloud run deploy order-api --source . --region asia-northeast1 --allow-unauthenticated --set-env-vars ALGORITHM=HS256 --set-env-vars SECRET_KEY='your_secret_key'
+
+# Gateway API
+cd ../gateway-api
+gcloud run deploy gateway-api --source . --region asia-northeast1 --allow-unauthenticated
+
+```
+
+#### 5. order-workerのデプロイ
+
+```bash
+cd order_worker
+gcloud builds submit --tag gcr.io/[PROJECT_ID]/order-worker
+gcloud run jobs create order-worker --image gcr.io/[PROJECT_ID]/order-worker --region asia-northeast1 --execute-now
+```
+
+### GCP環境（デプロイ後）
+
+デプロイ後のURLは以下のコマンドで確認できます。\
+各サービスのSwagger UIへは各URLに`/docs`を付けてアクセスしてください。
+
+```bash
+# URL一覧確認
+gcloud run services list --region asia-northeast1
+```
+
+API Gatewayでは、単一エントリーポイントで全てのAPIにアクセスできます。
+
+```bash
+# API Gateway
+https://gateway-api-[PROJECT_ID].asia-northeast1.run.app/docs
+
+```
+
+## セットアップ(ローカル開発環境)
 
 ### 1. 依存パッケージのインストール
 
@@ -97,7 +246,17 @@ pip install -r ../requirements.txt
 
 ```
 
-### 2. 各サービスのデータベースセットアップ
+### 2. Redisの起動
+
+```bash
+# Dockerを使用
+docker run -d -p 6379:6379 --name redis redis:latest
+
+# 起動確認
+docker ps
+```
+
+### 3. 各サービスのデータベースセットアップ
 
 ```bash
 # Auth API
@@ -122,90 +281,54 @@ alembic upgrade head
 各サービスを別々のターミナルで起動してください。
 
 ```bash
-# Auth API
-cd auth-api
-python main.py
-# → http://localhost:8004
 
-# Product API
+# ターミナル1: Product API
 cd product-api
 python main.py
 # → http://localhost:8001
 
-# Stock API
+# ターミナル2: Stock API
 cd stock-api
 python main.py
 # → http://localhost:8002
 
-# Order API
+# ターミナル3: Order API
 cd order-api
 python main.py
 # → http://localhost:8003
+
+# ターミナル4: Auth API
+cd auth-api
+python main.py
+# → http://localhost:8004
+
+# ターミナル5: Gateway API
+cd gateway-api
+python uvicorn main:app
+# → http://localhost:8000
+
+# ターミナル5: イベント購読（order-worker）
+cd order_worker
+python event_listener.py
+# → イベント購読開始
 ```
 
 各サービスは自動生成されるSwagger UIでAPIを確認できます。
 
-- Auth API: <http://localhost:8000/docs>
 - Product API: <http://localhost:8001/docs>
 - Stock API: <http://localhost:8002/docs>
 - Order API: <http://localhost:8003/docs>
-
-## API 使用例
-
-### ユーザー登録
-   
-```bash
-curl -X POST http://localhost:8000/auth/signup \
-  -H "Content-Type: application/json" \
-  -d '{"user_name": "testuser", "password": "testpass1234"}'
-```
-
-### ログイン（JWT取得）
-
-```bash
-curl -X POST http://localhost:8000/auth/login \
-  -d "username=testuser&password=testpass1234"
-
-# レスポンス例
-{
-  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "token_type": "bearer"
-}
-```
-
-### 商品登録（Product API）
-
-```bash
-curl -X POST http://localhost:8001/products \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "デスク",
-    "price": "15000",
-    "detail": "木製の学習机",
-    "category_id": 1
-  }'
-```
-
-### 在庫登録（Stock API）
-
-```bash
-curl -X POST http://localhost:8002/stock \
-  -H "Content-Type: application/json" \
-  -d '{
-    "product_id": 1,
-    "stock": 50
-  }'
-```
-
-### 注文（Order API - JWT必須）
-
-```bash
-curl -X POST "http://localhost:8003/order?product_id=1&quantity=2" \
-  -H "Authorization: Bearer {JWT_TOKEN}"
-```
+- Auth API: <http://localhost:8004/docs>
+- Gateway API: <http://localhost:8000/docs>
 
 ## 工夫した点・学んだこと
+
 - 非同期通信を利用することでレスポンス速度を向上させた
+- 実務を想定して過度に複雑な構成にするのではなく、基本的なイベント発生と購読の流れを明確に理解することを重視した
+- 在庫整合性を同期的に保証するのではなく、可用性を優先し、在庫は最終的に整合する前提で設計した
 
 ## 改善点・今後の課題
 
+- [x] API Gateway導入
+- [ ]監視・ログ集約
+- [ ]CI/CD自動化
