@@ -3,7 +3,7 @@
 FastAPIを使用したEcサイトの注文システムをマイクロサービス構成で実装しました。\
 各サービスを疎結合に作成しており、非同期に連携させています。
 注文確定時にイベントを発生させ、後続の処理をする仕組みをいれました。\
-デモURL：gateway-api <! https://gateway-api-987336615042.asia-northeast1.run.app/docs>
+デモURL：[gateway-api](https://gateway-api-987336615042.asia-northeast1.run.app/docs)
 
 ## ブランチ構成
 
