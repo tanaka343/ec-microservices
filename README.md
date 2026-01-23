@@ -2,15 +2,8 @@
 
 FastAPIを使用したEcサイトの注文システムをマイクロサービス構成で実装しました。\
 各サービスを疎結合に作成しており、非同期に連携させています。
-注文確定時にイベントを発生させ、後続の処理をする仕組みをいれました。
-
-## デモURL
-
-- gateway-api: https://gateway-api-987336615042.asia-northeast1.run.app/docs
-- product-api: https://product-api-987336615042.asia-northeast1.run.app/docs
-- stock-api: https://stock-api-987336615042.asia-northeast1.run.app/docs
-- order-api: https://order-api-987336615042.asia-northeast1.run.app/docs
-- auth-api: https://auth-api-987336615042.asia-northeast1.run.app/docs
+注文確定時にイベントを発生させ、後続の処理をする仕組みをいれました。\
+デモURL：gateway-api <! https://gateway-api-987336615042.asia-northeast1.run.app/docs>
 
 ## ブランチ構成
 
@@ -29,7 +22,10 @@ FastAPIを使用したEcサイトの注文システムをマイクロサービ�
 
 ### GCP本番環境（Cloud Pub/Sub使用）
 
-![GCP環境構成](images/注文システムアプリ図-GCP版注文システム.drawio%20.png)
+![GCP環境構成](images/注文システムアプリ図-GCP版注文システム.drawio%20.png)\
+※ 注文確定後の非同期処理は Cloud Run Job として分離しています。\
+本来は Pub/Sub → Job 実行のトリガーを介して動作する想定です。\
+本ポートフォリオでは手動実行で挙動を確認しています。
 
 ### ローカル開発環境（Redis使用）
 
@@ -117,11 +113,11 @@ ec-microservice/
 
 ### デプロイ済みサービス(稼働中)
 
-- gateway-api: Cloud Run(ルーティング集約)
-- auth-api: Cloud Run (JWT認証)
-- product-api: Cloud Run (商品管理)
-- stock-api: Cloud Run (在庫管理)
-- order-api: Cloud Run (注文処理)
+- gateway-api: Cloud Run(ルーティング集約): https://gateway-api-987336615042.asia-northeast1.run.app/docs
+- auth-api: Cloud Run (JWT認証): https://auth-api-987336615042.asia-northeast1.run.app/docs
+- product-api: Cloud Run (商品管理): https://product-api-987336615042.asia-northeast1.run.app/docs
+- stock-api: Cloud Run (在庫管理): https://stock-api-987336615042.asia-northeast1.run.app/docs
+- order-api: Cloud Run (注文処理): https://order-api-987336615042.asia-northeast1.run.app/docs
 - order-worker: Cloud Run Jobs (イベント購読)
 - メッセージキュー: Cloud Pub/Sub
 
@@ -131,7 +127,7 @@ ec-microservice/
 
 4つのサービスが正常にデプロイされている状態。
 
-#### 動作確認
+#### 動作確認画面
 
 ![注文](images/order2.png)
 ![在庫減少](images/stock2.png)
@@ -141,31 +137,37 @@ ec-microservice/
 
 ## イベント駆動の動作確認方法
 
-1. ユーザー登録とログイン
-    - gateway-api/auth-api: ユーザー登録（例: username=testuser, password=test1234）
-    - gateway-api/auth-apiI: ログインしてJWTを取得
+### 1. **ユーザー登録とログイン**
+- gateway-api/auth-api: ユーザー登録（例: username=testuser, password=test1234）
+- gateway-api/auth-apiI: ログインしてJWTを取得
+- JWTをAuthorizationヘッダーにセット（鍵マーク）
+
+### 2. **商品と在庫を登録**
+※あらかじめテストデータ挿入済み、各GETエンドポイントから確認
+- Product API: 商品作成
+- Stock API: 在庫登録（例: stock=5）
+
+### 3. **注文を実行**
+- Order API: `/order?product_id=1&quantity=5`
+
+### 4. **自動処理を確認**
+【デプロイ環境の場合】\
+注文確定後の非同期処理は Cloud Run Job として分離しています。\
+本来は Pub/Sub → Job 実行のトリガーを介して動作する想定です。\
+本ポートフォリオでは手動実行で挙動を確認しています。
+
+- Stock API: 在庫が5→0に減少
+- Product API: 在庫が0になったら、statusがtrue→falseに変更（販売中止）
   
-2. **商品と在庫を登録**
-   - Product API: 商品作成
-   - Stock API: 在庫登録（例: stock=5）
+## デプロイ手順
 
-3. **注文を実行**
-   - JWTをAuthorizationヘッダーにセット
-   - Order API: `/order?product_id=1&quantity=5`
-
-4. **自動処理を確認**
-   - Stock API: 在庫が5→0に減少
-   - Product API: 在庫が0になったら、statusがtrue→falseに変更（販売中止）
-  
-### デプロイ手順
-
-#### 1. 前提条件
+### 1. 前提条件
 
 - Google Cloud CLIインストール済み
 - GCPプロジェクト作成済み
 - 課金アカウント設定済み
 
-#### 2. 認証とプロジェクト設定
+### 2. 認証とプロジェクト設定
 
 ```bash
 gcloud auth login
@@ -175,14 +177,14 @@ gcloud services enable artifactregistry.googleapis.com
 gcloud services enable pubsub.googleapis.com
 ```
 
-#### 3. Pub/Subセットアップ
+### 3. Pub/Subセットアップ
 
 ```bash
 gcloud pubsub topics create order-confirmed
 gcloud pubsub subscriptions create order-confirmed-sub --topic=order-confirmed
 ```
 
-#### 4. 各サービスのデプロイ
+### 4. 各サービスのデプロイ
 
 ```bash
 # デプロイ用ブランチに切り替え
@@ -211,7 +213,7 @@ gcloud run deploy gateway-api --source . --region asia-northeast1 --allow-unauth
 
 ```
 
-#### 5. order-workerのデプロイ
+### 5. order-workerのデプロイ
 
 ```bash
 cd order_worker
