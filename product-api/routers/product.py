@@ -23,7 +23,7 @@ async def find_by_id(id :int,db :Session = Depends(get_db)):
     except ProductNotFoundError as e:
        raise HTTPException(status_code=404,detail=str(e))
    
-@router.get("/",response_model=list[ItemResponse],status_code=status.HTTP_200_OK)
+@router.get("",response_model=list[ItemResponse],status_code=status.HTTP_200_OK)
 async def find_by_name(name :str,db :DbDependency):
     try:
         product_cruds.find_by_name(name,db)
